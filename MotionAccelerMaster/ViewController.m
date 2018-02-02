@@ -40,10 +40,12 @@
 
 @interface ViewController ()
 
+//@property (assign, nonatomic) BOOL lockDeviceOrientation;
 @property (assign, nonatomic) NSTimeInterval updateInterval;
 @property (strong, nonatomic) CMMotionManager *mManager;
 @property (weak, nonatomic) IBOutlet UILabel *showLabel;
 @property (weak, nonatomic) IBOutlet UIView *showView;
+@property (assign, nonatomic) UIDeviceOrientation orientation;
 
 @end
 
@@ -52,13 +54,20 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    
+//    self.lockDeviceOrientation = NO;
+//    [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
+//    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleDeviceOrientationDidChange:) name:UIDeviceOrientationDidChangeNotification object:nil];
     [self startUpDateAccelerometer];
+    self.orientation = UIDeviceOrientationPortrait;
+    [self transformView:self.orientation];
 }
 
 - (void)viewDidDisappear:(BOOL)animated {
     [super viewDidDisappear: animated];
     
+    
+//    [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
+//    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
     [self stopUpdate];
 }
 
@@ -69,6 +78,8 @@
     }
     return _mManager;
 }
+
+
 
 - (void)startUpDateAccelerometer {
     if (![self.mManager isAccelerometerAvailable]) {
@@ -87,9 +98,7 @@
             return;
         }
         
-        [strongSelf handle3AccelerometerData:accelerometerData];
-        
-        
+        [strongSelf handle2AccelerometerData:accelerometerData];
     }];
 }
 
@@ -107,10 +116,19 @@
 }
 
 #pragma mark -
+//- (void)handleDeviceOrientationDidChange: (NSNotification *)noti {
+//    UIDevice *device = [UIDevice currentDevice];
+//
+//    _lockDeviceOrientation = NO;
+//    self.orientation = device.orientation;
+////    [self transformView:device.orientation];
+//}
+
+
 - (void)handle1AccelerometerData: (CMAccelerometerData * _Nullable) accelerometerData {
     double x = accelerometerData.acceleration.x;
     double y = accelerometerData.acceleration.y;
-    double z = accelerometerData.acceleration.z;
+//    double z = accelerometerData.acceleration.z;
     
     if (fabs(y) >= fabs(x))
     {
@@ -144,11 +162,11 @@
 
 - (void)handle2AccelerometerData: (CMAccelerometerData * _Nullable) accelerometerData {
     double angle = atan2(accelerometerData.acceleration.y, accelerometerData.acceleration.x);
-    if (angle >= -2.25 && angle <= -0.25) {
+    if (angle >= -2.25 && angle <= -0.75) {
         // UIDeviceOrientationPortrait
         [self transformView:UIDeviceOrientationPortrait];
     }
-    else if (angle >= -1.75 && angle <= 0.75) {
+    else if (angle >= -0.75 && angle <= 0.75) {
         //UIDeviceOrientationLandscapeLeft
         [self transformView:UIDeviceOrientationLandscapeLeft];
     }
@@ -164,17 +182,19 @@
 
 // 推荐用这个方法
 - (void)handle3AccelerometerData: (CMAccelerometerData * _Nullable) accelerometerData {
+    
+    UIDeviceOrientation orientationNew;
     if (accelerometerData.acceleration.x >= 0.75) {//home button left
-        [self transformView:UIDeviceOrientationLandscapeLeft];
+        orientationNew= UIDeviceOrientationLandscapeRight;
     }
     else if (accelerometerData.acceleration.x <= -0.75) {//home button right
-        [self transformView:UIDeviceOrientationLandscapeRight];
+        orientationNew = UIDeviceOrientationLandscapeLeft;
     }
     else if (accelerometerData.acceleration.y <= -0.75) {
-        [self transformView:UIDeviceOrientationPortrait];
+        orientationNew = UIDeviceOrientationPortrait;
     }
     else if (accelerometerData.acceleration.y >= 0.75) {
-        [self transformView:UIDeviceOrientationPortraitUpsideDown];
+        orientationNew = UIDeviceOrientationPortraitUpsideDown;
     }
     else {
         // Consider same as last time
@@ -182,32 +202,49 @@
     }
     
     if (accelerometerData.acceleration.z < 0) {
-        NSLog(@"当前的方向：屏幕朝上");
+//        NSLog(@"当前的方向：屏幕朝上");
     }else{
-        NSLog(@"当前的方向：屏幕朝下");
+//        NSLog(@"当前的方向：屏幕朝下");
+    }
+    
+    if (orientationNew == self.orientation) {
+        return;
+    }
+    
+    self.orientation = orientationNew;
+    [self transformView:orientationNew];
+}
+
+- (BOOL)shouldAutorotate {
+    return false;
+}
+
+- (void)setOrientation:(UIDeviceOrientation)orientation {
+    if (_orientation != orientation) {
+        _orientation = orientation;
     }
 }
 
 - (void)transformView:(UIDeviceOrientation)oritentation {
     switch (oritentation) {
         case UIDeviceOrientationLandscapeLeft:
-            NSLog(@"当前的方向：Left");
+//            NSLog(@"当前的方向：Left");
             
             [self.showLabel setText:@"当前的方向：Left"];
-            [self.showLabel setTransform:CGAffineTransformMakeRotation(-M_PI_2)];
-            [self.showView setTransform:CGAffineTransformMakeRotation(-M_PI_2)];
-            break;
-            
-        case UIDeviceOrientationLandscapeRight:
-            NSLog(@"当前的方向：Right");
-            
-            [self.showLabel setText:@"当前的方向：Right"];
             [self.showLabel setTransform:CGAffineTransformMakeRotation(M_PI_2)];
             [self.showView setTransform:CGAffineTransformMakeRotation(M_PI_2)];
             break;
             
+        case UIDeviceOrientationLandscapeRight:
+//            NSLog(@"当前的方向：Right");
+            
+            [self.showLabel setText:@"当前的方向：Right"];
+            [self.showLabel setTransform:CGAffineTransformMakeRotation(-M_PI_2)];
+            [self.showView setTransform:CGAffineTransformMakeRotation(-M_PI_2)];
+            break;
+            
         case UIDeviceOrientationPortrait:
-            NSLog(@"当前的方向：Portrait");
+//            NSLog(@"当前的方向：Portrait");
             
             [self.showLabel setText:@"当前的方向：Portrait"];
             [self.showLabel setTransform:CGAffineTransformIdentity];
@@ -215,7 +252,7 @@
             break;
             
         case UIDeviceOrientationPortraitUpsideDown:
-            NSLog(@"当前的方向：Down");
+//            NSLog(@"当前的方向：Down");
             
             [self.showLabel setText:@"当前的方向：Down"];
             [self.showLabel setTransform:CGAffineTransformMakeRotation(M_PI)];
@@ -225,6 +262,11 @@
         default:
             break;
     }
+}
+
+- (void)willTransitionToTraitCollection:(UITraitCollection *)newCollection withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator {
+
+    [self transformView:self.orientation];
 }
 
 - (void)didReceiveMemoryWarning {
